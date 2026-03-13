@@ -7,9 +7,8 @@ import PropTypes from "prop-types";
 const News = (props) => {
 
   const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [totalResults, setTotalResults] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   const capitalizeFirstLetter = (str) => {
     return str.charAt(0).toUpperCase() + str.slice(1);
@@ -19,9 +18,7 @@ const News = (props) => {
 
     props.setProgress(10);
 
-    const url = `https://newsapi.org/v2/top-headlines?country=us&category=${props.category}&apiKey=${props.apiKey}&pageSize=${props.pageSize}&page=${page}`;
-
-    setLoading(true);
+    const url = `https://newsapi.org/v2/everything?q=${props.category}&apiKey=${props.apiKey}&pageSize=${props.pageSize}&page=1`;
 
     props.setProgress(30);
 
@@ -31,9 +28,6 @@ const News = (props) => {
     props.setProgress(70);
 
     setArticles(data.articles || []);
-    setTotalResults(data.totalResults || 0);
-
-    setLoading(false);
 
     props.setProgress(100);
   };
@@ -47,17 +41,21 @@ const News = (props) => {
   }, []);
 
 
-
   const fetchMoreData = async () => {
 
     const nextPage = page + 1;
 
-    const url = `https://newsapi.org/v2/top-headlines?country=us&category=${props.category}&apiKey=${props.apiKey}&pageSize=${props.pageSize}&page=${nextPage}`;
+    const url = `https://newsapi.org/v2/everything?q=${props.category}&apiKey=${props.apiKey}&pageSize=${props.pageSize}&page=${nextPage}`;
 
     const response = await fetch(url);
     const data = await response.json();
 
-    setArticles(articles.concat(data.articles || []));
+    if (!data.articles || data.articles.length === 0) {
+      setHasMore(false);
+      return;
+    }
+
+    setArticles(articles.concat(data.articles));
     setPage(nextPage);
   };
 
@@ -70,13 +68,16 @@ const News = (props) => {
         News - Top {capitalizeFirstLetter(props.category)} Headlines
       </h1>
 
-      {loading && <Spinner />}
-
       <InfiniteScroll
         dataLength={articles.length}
         next={fetchMoreData}
-        hasMore={articles.length !== totalResults}
+        hasMore={hasMore}
         loader={<Spinner />}
+        endMessage={
+          <p style={{ textAlign: "center" }}>
+            <b>No more news to show</b>
+          </p>
+        }
       >
 
         <div className="row">
